@@ -72,13 +72,16 @@
            ;; form and set successp to T. However, if a non-local exit
            ;; happens, we cancel it, so it is not propagated more.
            (%js-try
-
+            
             ;; Capture unhandled Lisp conditeions.
             (handler-case
-                (let* ((form (read-from-string input))
-                       (results (multiple-value-list (eval-interactive form))))
-                  (dolist (x results)
-                    (#j:jqconsole:Write (format nil "~S~%" x) "jqconsole-return")))
+                (if (string= input "")
+                    (#j:jqconsole:Write (format nil "; No value~%") "jqconsole-return")
+                    (let* ((form (read-from-string input))
+                           (results (multiple-value-list (eval-interactive form))))
+                      (dolist (x results)
+                        (#j:jqconsole:Write (format nil "~S~%" x) "jqconsole-return"))))
+                
               (error (err)
                 (#j:jqconsole:Write "ERROR: " "jqconsole-error")
                 (#j:jqconsole:Write (apply #'format nil (!condition-args err)) "jqconsole-error")

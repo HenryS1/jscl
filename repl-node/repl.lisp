@@ -30,10 +30,12 @@
              (%js-try
               (progn
                 (handler-case
-                    (let ((results (multiple-value-list
-                                    (eval-interactive (read-from-string line)))))
-                      (dolist (result results)
-                        (print result)))
+                    (if (= (length line) 0)
+                        (format t "; No value~%")
+                        (let ((results (multiple-value-list
+                                        (eval-interactive (read-from-string line)))))
+                          (dolist (result results)
+                            (print result))))
                   (error (err)
                     (format t "ERROR: ")
                     (apply #'format t (!condition-args err))
