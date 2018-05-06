@@ -18,12 +18,6 @@
 (defun in-expressionp (input)
   (> (paren-nesting-level input) 0))
 
-(defun remove-comments (line)
-  (let ((comment-start (position #\; line)))
-    (if comment-start
-        (concat (subseq line 0 comment-start))
-        line)))
-
 (defun node-init ()
   (setq *standard-output*
         (make-stream
