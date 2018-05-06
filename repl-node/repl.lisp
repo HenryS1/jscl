@@ -15,6 +15,15 @@
 
 (defvar *rl*)
 
+(defun in-expressionp (input)
+  (> (paren-nesting-level input) 0))
+
+(defun remove-comments (line)
+  (let ((comment-start (position #\; line)))
+    (if comment-start
+        (concat (subseq line 0 comment-start))
+        line)))
+
 (defun node-init ()
   (setq *standard-output*
         (make-stream
@@ -22,29 +31,46 @@
                      (#j:process:stdout:write string))))
   (setq *rl* (#j:readline:createInterface #j:process:stdin #j:process:stdout))
   (welcome-message)
-  (let ((*root* *rl*))
-    (#j:setPrompt "CL-USER> ")
-    (#j:prompt)
-    (#j:on "line"
-           (lambda (line)
-             (%js-try
-              (progn
+  (let ((*root* *rl*)
+        (input ""))
+    (labels ((set-prompt (prompt-str)
+               ((oget *rl* "setPrompt") prompt-str))
+             (clear-prompt () (set-prompt ""))
+             (append-to-input (line)  
+               (setf input (concat input #\newline line)))
+             (reset-prompt () 
+               (progn 
+                 (set-prompt "CL-USER> ")
+                 (setf input ""))))
+      (reset-prompt)
+      (#j:prompt)
+      (#j:on "line"
+             (lambda (line)
+               (%js-try
                 (handler-case
-                    (if (= (length line) 0)
-                        (format t "; No value~%")
-                        (let ((results (multiple-value-list
-                                        (eval-interactive (read-from-string line)))))
-                          (dolist (result results)
-                            (print result))))
+                    (progn 
+                      (append-to-input line)
+                      (cond ((or (= (length line) 0) 
+                                 (in-expressionp input))
+                             (clear-prompt))
+                            ((imbalanced-parensp input)
+                             (error "imbalanced parentheses"))
+                            (t (let ((results (multiple-value-list
+                                               (eval-interactive (read-from-string input)))))
+                                 (dolist (result results)
+                                   (print result))
+                                 (reset-prompt)))))
                   (error (err)
+                    (reset-prompt)
                     (format t "ERROR: ")
                     (apply #'format t (!condition-args err))
-                    (terpri))))
-              (catch (err)
-                (let ((message (or (oget err "message") err)))
-                  (format t "ERROR[!]: ~a~%" message))))
-             ;; Continue
-             ((oget *rl* "prompt"))))))
+                    (terpri)))
+                (catch (err)
+                  (let ((message (or (oget err "message") err)))
+                    (reset-prompt)
+                    (format t "ERROR[!]: ~a~%" message))))
+               ;; Continue
+               ((oget *rl* "prompt")))))))
 
 
 (node-init)

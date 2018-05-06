@@ -549,7 +549,9 @@
             (cond
               ((or (null ch) (char= ch #\)))
                (if eof-error-p
-                   (error "End of file")
+                   (progn 
+                     (%read-char stream)
+                     (error "End of file"))
                    eof-value))
               ((char= ch #\()
                (%read-char stream)

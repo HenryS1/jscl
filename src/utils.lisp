@@ -18,6 +18,36 @@
 
 (/debug "loading utils.lisp!")
 
+(defun paren-nesting-level (string)
+  (let ((i 0)
+        (stringp nil)
+        (s (length string))
+        (depth 0))
+    (while (< i s)
+      (cond
+        (stringp
+         (case (char string i)
+           (#\\
+            (incf i))
+           (#\"
+            (setq stringp nil)
+            (decf depth))))
+        (t
+         (case (char string i)
+           (#\( (incf depth))
+           (#\)  
+            (progn (if (= depth 0)
+                       (setf i s))
+                   (decf depth)))
+           (#\"
+            (incf depth)
+            (setq stringp t)))))
+      (incf i))
+    depth))
+
+(defun imbalanced-parensp (input)
+  (< (paren-nesting-level input) 0))
+
 (defmacro with-collect (&body body)
   "Makes available to BODY a function named collect. The function accumulates
 values passed to it. The return value of with-collect is the list of values
